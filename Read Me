@@ -1,0 +1,4 @@
+To start server go to Git Bash and Run command 
+prefect server start
+
+Navigate to    http://127.0.0.1:4200
