@@ -8,17 +8,11 @@ from typing import List
 
 
 @task
+@task
 def load_excel_files(base_path, year, week):
     """
-    Load all Excel files from the specified directory into individual DataFrames.
-
-    Args:
-        base_path (str): The base directory where all data is stored.
-        year (str): The specific year folder (e.g., "2023").
-        week (str): The specific week folder (e.g., "Week_1").
-
-    Returns:
-        dict: A dictionary where keys are file names (without extensions) and values are DataFrames.
+    Load all Excel files from the specified directory into individual DataFrames,
+    standardizing column names to lowercase and removing spaces for database compatibility.
     """
     target_directory = os.path.join(base_path, year, week)
     dataframes = {}
@@ -32,6 +26,10 @@ def load_excel_files(base_path, year, week):
             file_path = os.path.join(target_directory, file_name)
             try:
                 df = pd.read_excel(file_path)
+
+                # Standardize column names: lowercase and remove spaces
+                df.columns = df.columns.str.lower().str.replace(' ', '').str.rstrip('.')
+
                 key_name = os.path.splitext(file_name)[0]
                 dataframes[key_name] = df
                 print(f"Loaded: {file_name} into DataFrame '{key_name}'")
@@ -39,6 +37,7 @@ def load_excel_files(base_path, year, week):
                 print(f"Error loading {file_name}: {e}")
 
     return dataframes
+
 
 # Step 2: Populate Team IDs
 @task
@@ -110,10 +109,10 @@ def populate_team_ids(dataframes):
     for file_name, df in dataframes.items():
         try:
             # Handle awayteamid and hometeamid for all tables
-            if 'Away Team' in df.columns:
-                df['awayteamid'] = df['Away Team'].map(team_mapping)
-            if 'Home Team' in df.columns:
-                df['hometeamid'] = df['Home Team'].map(team_mapping)
+            if 'awayteam' in df.columns:
+                df['awayteamid'] = df['awayteam'].map(team_mapping)
+            if 'hometeam' in df.columns:
+                df['hometeamid'] = df['hometeam'].map(team_mapping)
 
             # Handle specific case for defense table
             if 'Player_Defense_Stats' in file_name:
@@ -178,7 +177,7 @@ def assign_gamesummary_ids(dataframes):
     for file_name, df in dataframes.items():
         try:
             # Ensure the required columns exist
-            required_columns = ['Season', 'Week', 'awayteamid', 'hometeamid']
+            required_columns = ['season', 'week', 'awayteamid', 'hometeamid']
             missing_columns = [col for col in required_columns if col not in df.columns]
             if missing_columns:
                 print(f"Missing required columns in {file_name}: {missing_columns}")
@@ -187,8 +186,8 @@ def assign_gamesummary_ids(dataframes):
             # Create the gamesummaryid
             df['gamesummaryid'] = (
                 "gs-" +
-                df['Season'].astype(str) +
-                df['Week'].astype(str).str.zfill(2) +  # Ensure Week is zero-padded (e.g., Week 1 -> '01')
+                df['season'].astype(str) +
+                df['week'].astype(str).str.zfill(2) +  # Ensure Week is zero-padded (e.g., Week 1 -> '01')
                 df['awayteamid'].astype(str) +
                 df['hometeamid'].astype(str)
             )
@@ -215,7 +214,7 @@ def assign_drivestats_ids(dataframes):
         # Process Drive Stats DataFrame
         if key.endswith("Drive_Stats"):
             try:
-                required_columns = ['Season', 'Week', 'awayteamid', 'hometeamid', 'quarter']
+                required_columns = ['season', 'week', 'awayteamid', 'hometeamid', 'quarter']
                 if not all(col in df.columns for col in required_columns):
                     print(f"Missing required columns in {key}: {required_columns}")
                     continue
@@ -223,8 +222,8 @@ def assign_drivestats_ids(dataframes):
                 # Create drivestatsid
                 df['drivestatsid'] = (
                     "ds-" +
-                    df['Season'].astype(str) +
-                    df['Week'].astype(str).str.zfill(2) +
+                    df['season'].astype(str) +
+                    df['week'].astype(str).str.zfill(2) +
                     df['awayteamid'].astype(str) +
                     df['hometeamid'].astype(str) +
                     df['quarter'].astype(str)
@@ -233,14 +232,14 @@ def assign_drivestats_ids(dataframes):
                 print(f"Assigned 'drivestatsid' for: {key}")
                 # Print sample results
                 print(f"Sample results for '{key}' (Drive Stats):")
-                print(df[['Season', 'Week', 'awayteamid', 'hometeamid', 'quarter', 'drivestatsid']].head())
+                print(df[['season', 'week', 'awayteamid', 'hometeamid', 'quarter', 'drivestatsid']].head())
             except Exception as e:
                 print(f"Error processing {key}: {e}")
 
         # Process Drive Details DataFrame
         elif key.endswith("Drive_Details"):
             try:
-                required_columns = ['Season', 'Week', 'awayteamid', 'hometeamid', 'Quarter']
+                required_columns = ['season', 'week', 'awayteamid', 'hometeamid', 'Quarter']
                 if not all(col in df.columns for col in required_columns):
                     print(f"Missing required columns in {key}: {required_columns}")
                     continue
@@ -248,8 +247,8 @@ def assign_drivestats_ids(dataframes):
                 # Create drivestatsid
                 df['drivestatsid'] = (
                     "ds-" +
-                    df['Season'].astype(str) +
-                    df['Week'].astype(str).str.zfill(2) +
+                    df['season'].astype(str) +
+                    df['week'].astype(str).str.zfill(2) +
                     df['awayteamid'].astype(str) +
                     df['hometeamid'].astype(str) +
                     df['Quarter'].astype(str)
@@ -258,7 +257,7 @@ def assign_drivestats_ids(dataframes):
                 print(f"Assigned 'drivestatsid' for: {key}")
                 # Print sample results
                 print(f"Sample results for '{key}' (Drive Details):")
-                print(df[['Season', 'Week', 'awayteamid', 'hometeamid', 'Quarter', 'drivestatsid']].head())
+                print(df[['season', 'week', 'awayteamid', 'hometeamid', 'Quarter', 'drivestatsid']].head())
             except Exception as e:
                 print(f"Error processing {key}: {e}")
 
@@ -597,7 +596,7 @@ if __name__ == "__main__":
     # Configuration
     base_directory = r"C:\NFLStats\data"
     years_to_process = ["2023"]  # Add more years as needed
-    weeks_to_process = list(range(3, 4))  # Weeks 1-22
+    weeks_to_process = list(range(1, 2))  # Weeks 1-22
 
     # Run the master flow
     process_multiple_periods(
